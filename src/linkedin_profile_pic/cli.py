@@ -83,13 +83,18 @@ def get_profile_pictures(usernames, output_folder):
 
     driver.quit()
 
+def extract_username(link):
+    if "linkedin.com/in/" in link:
+        return link.split("linkedin.com/in/")[1].strip('/')
+    return link.strip()
+
 @click.command()
-@click.option('--usernames', prompt='Enter comma-separated LinkedIn usernames',
-              help='Comma-separated list of LinkedIn usernames')
+@click.option('--usernames', prompt='Enter comma-separated LinkedIn usernames or URLs',
+              help='Comma-separated list of LinkedIn usernames or URLs')
 @click.option('--output', default=None, help='Output folder for images')
 def cli(usernames, output):
     """Get profile pictures for LinkedIn users."""
-    username_list = [username.strip() for username in usernames.split(',')]
+    username_list = [extract_username(username) for username in usernames.split(',')]
     
     if not output:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
