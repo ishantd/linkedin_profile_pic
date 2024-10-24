@@ -11,7 +11,7 @@ setup(
     description="A tool to download LinkedIn profile pictures",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/linkedin_profile_pic",
+    url="https://github.com/ishantd/linkedin_profile_pic",
     packages=find_packages(),
     install_requires=[
         "selenium",
