@@ -10,6 +10,8 @@ from selenium.webdriver.support import expected_conditions as EC
 import requests
 import click
 from tqdm import tqdm
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service
 
 CREDS_FILE = 'linkedin_creds.json'
 
@@ -24,19 +26,37 @@ def load_credentials(driver):
     for cookie in cookies:
         driver.add_cookie(cookie)
 
-def get_profile_pictures(usernames, output_folder, use_saved_creds):
+def create_driver(headless=False):
     options = Options()
-    options.add_argument("user-data-dir=selenium")
-    driver = webdriver.Chrome(options=options)
+    options.add_argument("user-data-dir=.selenium")
+    if headless:
+        options.add_argument("--headless")
     
-    if use_saved_creds and os.path.exists(CREDS_FILE):
-        driver.get("https://www.linkedin.com")
-        load_credentials(driver)
-        driver.refresh()
-    else:
-        driver.get("https://www.linkedin.com/login")
-        input("Please log in to LinkedIn and press Enter when done...")
-        save_credentials(driver)
+    return webdriver.Chrome(options=options)
+
+def login_to_linkedin():
+    print("🚀 We'll open LinkedIn for you to log in. This is a one-time process. 🔐")
+    input("Press Enter to continue and come back here once you've logged in... 😊")
+    
+    driver = create_driver()
+    
+    driver.get("https://www.linkedin.com/login")
+    print("🖥️ LinkedIn login page opened. Please log in.")
+    input("If you're done logging in, press Enter again... 😊")
+    
+    save_credentials(driver)
+    print("✅ Credentials saved! You're all set for future use. 🎉")
+    
+    driver.quit()
+
+def get_profile_pictures(usernames, output_folder):
+    print(f"🔍 Preparing to get profile pictures for {len(usernames)} users...")
+    
+    driver = create_driver(headless=True)
+    
+    driver.get("https://www.linkedin.com")
+    load_credentials(driver)
+    driver.refresh()
 
     os.makedirs(output_folder, exist_ok=True)
 
@@ -48,7 +68,6 @@ def get_profile_pictures(usernames, output_folder, use_saved_creds):
             img_container = WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, ".pv-top-card-profile-picture__container"))
             )
-            # get img element from img container
             img_element = img_container.find_element(By.TAG_NAME, "img")
             img_url = img_element.get_attribute("src")
 
@@ -68,8 +87,7 @@ def get_profile_pictures(usernames, output_folder, use_saved_creds):
 @click.option('--usernames', prompt='Enter comma-separated LinkedIn usernames',
               help='Comma-separated list of LinkedIn usernames')
 @click.option('--output', default=None, help='Output folder for images')
-@click.option('--use-saved-creds', is_flag=True, help='Use saved credentials if available')
-def cli(usernames, output, use_saved_creds):
+def cli(usernames, output):
     """Get profile pictures for LinkedIn users."""
     username_list = [username.strip() for username in usernames.split(',')]
     
@@ -77,10 +95,10 @@ def cli(usernames, output, use_saved_creds):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output = f"linkedin_images_{timestamp}"
     
-    if os.path.exists(CREDS_FILE) and not use_saved_creds:
-        use_saved_creds = click.confirm("Credentials found. Do you want to use them?", default=True)
+    if not os.path.exists(CREDS_FILE):
+        login_to_linkedin()
     
-    get_profile_pictures(username_list, output, use_saved_creds)
+    get_profile_pictures(username_list, output)
 
 if __name__ == "__main__":
     cli()
